@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ACO vs Greedy Maze Solver</title>
+  <style>
+    body { 
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+      color: white; 
+      text-align: center; 
+      font-family: 'Segoe UI', sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h2 {
+      font-size: 32px;
+      margin: 20px 0;
+      text-shadow: 0 0 20px rgba(0,255,255,0.5);
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      gap: 30px;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .canvas-wrapper {
+      position: relative;
+    }
+    canvas { 
+      background: #16213e;
+      border: 3px solid #0f3460;
+      border-radius: 10px;
+      cursor: crosshair;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      transition: transform 0.2s;
+    }
+    canvas:hover {
+      transform: scale(1.01);
+    }
+    .stats-panel {
+      background: rgba(22,33,62,0.8);
+      border: 2px solid #0f3460;
+      border-radius: 15px;
+      padding: 25px;
+      min-width: 300px;
+      text-align: left;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    }
+    .stat-box {
+      background: rgba(15,52,96,0.5);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      border-left: 4px solid;
+      transition: all 0.3s;
+    }
+    .stat-box:hover {
+      transform: translateX(5px);
+      background: rgba(15,52,96,0.8);
+    }
+    .stat-box.aco {
+      border-color: #ffeb3b;
+    }
+    .stat-box.greedy {
+      border-color: #00ff00;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #888;
+      margin-bottom: 5px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    .stat-value.aco { color: #ffeb3b; }
+    .stat-value.greedy { color: #00ff00; }
+    .controls { 
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button { 
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+      color: white;
+      border: 2px solid #0f3460;
+      border-radius: 8px;
+      transition: all 0.3s;
+      font-weight: bold;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0,255,255,0.3);
+      border-color: #00ffff;
+    }
+    button:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    button:disabled { 
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #e94560 0%, #533483 100%);
+      border-color: #e94560;
+    }
+    button.primary:hover:not(:disabled) {
+      border-color: #ff6b81;
+    }
+    .info { 
+      font-size: 13px;
+      color: #888;
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(15,52,96,0.3);
+      border-radius: 8px;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+      margin: 10px 0;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00ffff, #ffeb3b);
+      width: 0%;
+      transition: width 0.3s;
+      border-radius: 3px;
+    }
+    .speed-control {
+      margin: 15px 0;
+    }
+    .speed-control label {
+      display: block;
+      margin-bottom: 8px;
+      color: #aaa;
+      font-size: 14px;
+    }
+    input[type="range"] {
+      width: 100%;
+      margin: 10px 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .running {
+      animation: pulse 1.5s infinite;
+    }
+    .legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+  </style>
+</head>
+<body>
+  <h2>🐜 ACO vs ⚡ Greedy Maze Solver</h2>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color" style="background: #00ff00;"></div>
+      <span>Start</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #ff0000;"></div>
+      <span>End</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: #1a1a1a;"></div>
+      <span>Wall</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: rgba(0,200,255,0.3);"></div>
+      <span>Pheromone Trail</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="canvas-wrapper">
+      <canvas id="mazeCanvas" width="600" height="600"></canvas>
+      <div class="controls">
+        <button id="acoBtn" class="primary" onclick="startACO()">🐜 Run ACO</button>
+        <button id="greedyBtn" class="primary" onclick="runGreedy()">⚡ Run Greedy</button>
+        <button onclick="runBoth()">🔥 Run Both</button>
+        <button onclick="resetMaze()">🔄 Reset</button>
+        <button onclick="generateRandomMaze()">🎲 Random Maze</button>
+      </div>
+    </div>
+
+    <div class="stats-panel">
+      <h3 style="margin-top: 0;">📊 Statistics</h3>
+      
+      <div class="stat-box aco">
+        <div class="stat-label">🐜 ACO Best Path</div>
+        <div class="stat-value aco" id="acoResult">N/A</div>
+        <div class="stat-label" id="acoTime" style="margin-top: 8px;">Time: --</div>
+      </div>
+
+      <div class="stat-box greedy">
+        <div class="stat-label">⚡ Greedy Path</div>
+        <div class="stat-value greedy" id="greedyResult">N/A</div>
+        <div class="stat-label" id="greedyTime" style="margin-top: 8px;">Time: --</div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressBar"></div>
+      </div>
+      <div id="progressText" style="font-size: 12px; color: #888; text-align: center;">Ready</div>
+
+      <div class="info">
+        <strong>ACO Parameters:</strong><br>
+        α=1 (pheromone)<br>
+        β=2 (heuristic)<br>
+        ρ=0.3 (evaporation)<br>
+        Q=100 (deposit)<br>
+        🐜 40 ants × 80 iterations
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const rows = 15, cols = 15, cellSize = 40;
+    const canvas = document.getElementById("mazeCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let maze = [
+      [0,0,0,1,0,0,0,0,0,1,0,0,0,0,0],
+      [1,1,0,1,0,1,1,1,0,1,0,1,1,1,0],
+      [0,0,0,0,0,0,0,1,0,0,0,0,0,1,0],
+      [0,1,1,1,1,1,0,1,1,1,1,1,0,1,0],
+      [0,1,0,0,0,0,0,0,0,0,1,0,0,1,0],
+      [0,1,0,1,1,1,1,1,1,0,1,1,0,1,0],
+      [0,0,0,1,0,0,0,0,0,0,0,0,0,0,0],
+      [1,1,0,1,0,1,1,1,1,1,1,1,1,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      [0,1,1,1,1,1,0,1,1,1,1,1,1,1,1],
+      [0,0,0,0,0,0,0,0,0,1,0,0,0,0,0],
+      [1,1,1,1,1,1,1,1,0,1,0,1,1,1,0],
+      [0,0,0,0,0,0,0,1,0,0,0,0,0,1,0],
+      [0,1,1,1,1,1,0,1,1,1,1,1,0,1,0],
+      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    ];
+
+    const start = [0, 0];
+    const end = [14, 14];
+    let pheromone = Array.from({length: rows}, () => Array(cols).fill(0.1));
+    
+    const alpha = 1, beta = 2, rho = 0.3, Q = 100;
+    const antsCount = 40, iterations = 80;
+
+    let acoTimeout = null;
+    let isRunning = false;
+    let animationSpeed = 100;
+
+    function resetPheromones() {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          pheromone[r][c] = 0.1;
+        }
+      }
+    }
+
+    function resetMaze() {
+      if (acoTimeout) clearTimeout(acoTimeout);
+      isRunning = false;
+      resetPheromones();
+      drawMaze();
+      document.getElementById("acoResult").textContent = "N/A";
+      document.getElementById("greedyResult").textContent = "N/A";
+      document.getElementById("acoTime").textContent = "Time: --";
+      document.getElementById("greedyTime").textContent = "Time: --";
+      document.getElementById("progressBar").style.width = "0%";
+      document.getElementById("progressText").textContent = "Ready";
+      enableButtons();
+    }
+
+    function generateRandomMaze() {
+      if (isRunning) return;
+      
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if ((r === start[0] && c === start[1]) || (r === end[0] && c === end[1])) {
+            maze[r][c] = 0;
+          } else {
+            maze[r][c] = Math.random() < 0.3 ? 1 : 0;
+          }
+        }
+      }
+      resetMaze();
+    }
+
+    function drawMaze() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (maze[r][c] === 1) {
+            ctx.fillStyle = "#1a1a1a";
+          } else {
+            const pheromoneLevel = Math.min(pheromone[r][c] * 0.8, 1);
+            ctx.fillStyle = `rgba(0,200,255,${pheromoneLevel * 0.4})`;
+          }
+          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          ctx.strokeStyle = "#555";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        }
+      }
+      ctx.fillStyle = "#00ff00";
+      ctx.fillRect(start[1]*cellSize, start[0]*cellSize, cellSize, cellSize);
+      ctx.fillStyle = "#ff0000";
+      ctx.fillRect(end[1]*cellSize, end[0]*cellSize, cellSize, cellSize);
+    }
+
+    function heuristic(r, c) {
+      return 1 / (Math.abs(r - end[0]) + Math.abs(c - end[1]) + 1);
+    }
+
+    function getNeighbors(r, c) {
+      const dirs = [[1,0],[-1,0],[0,1],[0,-1]]; 
+      return dirs.map(([dr,dc]) => [r+dr,c+dc])
+                 .filter(([nr,nc]) => nr>=0 && nr<rows && nc>=0 && nc<cols && maze[nr][nc]===0);
+    }
+
+    function disableButtons() {
+      document.getElementById("acoBtn").disabled = true;
+      document.getElementById("greedyBtn").disabled = true;
+    }
+
+    function enableButtons() {
+      document.getElementById("acoBtn").disabled = false;
+      document.getElementById("greedyBtn").disabled = false;
+      document.getElementById("progressBar").classList.remove("running");
+    }
+
+    function startACO() {
+      if (isRunning) return;
+      
+      if (acoTimeout) clearTimeout(acoTimeout);
+      resetPheromones();
+      isRunning = true;
+      disableButtons();
+
+      const startTime = performance.now();
+      document.getElementById("acoResult").textContent = "Running...";
+      document.getElementById("greedyResult").textContent = "N/A";
+      document.getElementById("progressBar").classList.add("running");
+      
+      let bestPath = null, bestLen = Infinity;
+      let iter = 0;
+
+      const runIteration = () => {
+        let paths = [];
+        for (let a = 0; a < antsCount; a++) {
+          let path = [start];
+          let [r, c] = start;
+          const visited = new Set([`${r},${c}`]);
+
+          const maxSteps = rows * cols * 2;
+          for (let step = 0; step < maxSteps; step++) {
+            const nbrs = getNeighbors(r, c).filter(([nr,nc]) => !visited.has(`${nr},${nc}`));
+            if (!nbrs.length) break;
+
+            let probs = [];
+            let sum = 0;
+            for (let [nr,nc] of nbrs) {
+              let tau = Math.pow(pheromone[nr][nc], alpha);
+              let eta = Math.pow(heuristic(nr,nc), beta);
+              let p = tau * eta;
+              probs.push(p);
+              sum += p;
+            }
+            
+            let rand = Math.random() * sum, s = 0;
+            let selected = false;
+            for (let i = 0; i < nbrs.length; i++) {
+              s += probs[i];
+              if (rand <= s) {
+                [r, c] = nbrs[i];
+                selected = true;
+                break;
+              }
+            }
+            
+            if (!selected && nbrs.length > 0) {
+              let bestIdx = 0;
+              for (let i = 1; i < probs.length; i++) {
+                if (probs[i] > probs[bestIdx]) bestIdx = i;
+              }
+              [r, c] = nbrs[bestIdx];
+            }
+            
+            path.push([r,c]);
+            visited.add(`${r},${c}`);
+            if (r === end[0] && c === end[1]) break;
+          }
+
+          if (r === end[0] && c === end[1] && path.length < bestLen) {
+            bestPath = path;
+            bestLen = path.length;
+          }
+          paths.push(path);
+        }
+
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++)
+            pheromone[r][c] *= (1 - rho);
+
+        for (let path of paths) {
+          if (path[path.length - 1][0] === end[0] && path[path.length - 1][1] === end[1]) {
+            const L = path.length;
+            for (let [r,c] of path) pheromone[r][c] += Q / L;
+          }
+        }
+
+        drawMaze();
+        iter++;
+        
+        const progress = (iter / iterations) * 100;
+        document.getElementById("progressBar").style.width = `${progress}%`;
+        document.getElementById("progressText").textContent = `Iteration ${iter}/${iterations}`;
+        
+        if (iter < iterations) {
+          acoTimeout = setTimeout(runIteration, animationSpeed);
+        } else {
+          isRunning = false;
+          enableButtons();
+          
+          const endTime = performance.now();
+          const timeTaken = ((endTime - startTime) / 1000).toFixed(2);
+          
+          if (bestPath) {
+            ctx.strokeStyle = "#ffff00";
+            ctx.lineWidth = 5;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#ffff00";
+            ctx.beginPath();
+            for (let [r,c] of bestPath)
+              ctx.lineTo(c*cellSize+cellSize/2, r*cellSize+cellSize/2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            document.getElementById("acoResult").textContent = bestLen;
+            document.getElementById("acoTime").textContent = `Time: ${timeTaken}s`;
+          } else {
+            document.getElementById("acoResult").textContent = "No Path";
+            document.getElementById("acoTime").textContent = `Time: ${timeTaken}s`;
+          }
+          document.getElementById("progressText").textContent = "Complete!";
+        }
+      };
+      runIteration();
+    }
+
+    function runGreedy() {
+      if (isRunning) return;
+      
+      if (acoTimeout) clearTimeout(acoTimeout);
+      resetPheromones();
+      isRunning = true;
+      disableButtons();
+
+      const startTime = performance.now();
+      document.getElementById("greedyResult").textContent = "Running...";
+      document.getElementById("progressBar").style.width = "100%";
+      document.getElementById("progressText").textContent = "Computing...";
+
+      setTimeout(() => {
+        const open = [start];
+        const cameFrom = new Map();
+        const visited = new Set([`${start[0]},${start[1]}`]);
+        let found = false;
+
+        while (open.length) {
+          open.sort((a,b) => heuristic(a[0],a[1]) - heuristic(b[0],b[1]));
+          const [r,c] = open.pop(); 
+          
+          if (r === end[0] && c === end[1]) { 
+            found = true; 
+            break; 
+          }
+
+          for (let [nr,nc] of getNeighbors(r,c)) {
+            if (!visited.has(`${nr},${nc}`)) {
+              visited.add(`${nr},${nc}`);
+              cameFrom.set(`${nr},${nc}`, [r,c]);
+              open.push([nr,nc]);
+            }
+          }
+        }
+
+        isRunning = false;
+        enableButtons();
+
+        const endTime = performance.now();
+        const timeTaken = ((endTime - startTime) / 1000).toFixed(3);
+
+        if (found) {
+          let path = [];
+          let cur = end;
+          while (cur) {
+            path.push(cur);
+            cur = cameFrom.get(`${cur[0]},${cur[1]}`);
+          }
+          path.reverse();
+          
+          // Don't clear the maze - draw greedy path on top of ACO
+          ctx.strokeStyle = "#00ff00";
+          ctx.lineWidth = 5;
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = "#00ff00";
+          ctx.beginPath();
+          for (let [r,c] of path)
+            ctx.lineTo(c*cellSize+cellSize/2, r*cellSize+cellSize/2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          document.getElementById("greedyResult").textContent = path.length;
+          document.getElementById("greedyTime").textContent = `Time: ${timeTaken}s`;
+        } else {
+          document.getElementById("greedyResult").textContent = "No Path";
+          document.getElementById("greedyTime").textContent = `Time: ${timeTaken}s`;
+        }
+        document.getElementById("progressText").textContent = "Complete!";
+      }, 50);
+    }
+
+    function runBoth() {
+      if (isRunning) return;
+      
+      // Run ACO first
+      startACO();
+      
+      // Wait for ACO to finish, then run Greedy
+      const checkInterval = setInterval(() => {
+        if (!isRunning) {
+          clearInterval(checkInterval);
+          setTimeout(() => {
+            runGreedy();
+          }, 500);
+        }
+      }, 100);
+    }
+
+    drawMaze();
+  </script>
+</body>
+</html>
